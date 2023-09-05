@@ -18,10 +18,11 @@ final class SettingsViewController: UIViewController {
     @IBOutlet var greenValueTextField: UITextField!
     @IBOutlet var blueValueTextField: UITextField!
     
-
+    // MARK: - Public Properties
     var color: UIColor!
     unowned var delegate: SettingsViewControllerDelegate!
     
+    // MARK: - View Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -32,8 +33,6 @@ final class SettingsViewController: UIViewController {
         colorView.layer.cornerRadius = 15
         
         getColor()
-        
-        addToolBarToKeyboard()
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -67,11 +66,39 @@ final class SettingsViewController: UIViewController {
 
 // MARK: - TextFieldDelegate
 extension SettingsViewController: UITextFieldDelegate {
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        let toolBar = UIToolbar()
+        let flexibleSpace = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
+        let doneButton = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: self,
+            action: #selector(donePressed)
+        )
+        
+        toolBar.items = [flexibleSpace, doneButton]
+        toolBar.sizeToFit()
+        
+        textField.inputAccessoryView = toolBar
+    }
+    
+    @objc private func donePressed() {
+        view.endEditing(true)
+    }
+    
     func textFieldDidEndEditing(_ textField: UITextField) {
         guard let value = textField.text else { return }
-        guard let floatValue = Float(value) else { return }
+        guard let floatValue = Float(value) else {
+            showAlert(for: textField)
+            setColor()
+            return
+        }
         guard floatValue <= 1 else {
-            showAlert()
+            showAlert(for: textField)
+            setColor()
             return
         }
         
@@ -93,13 +120,11 @@ extension SettingsViewController: UITextFieldDelegate {
 // MARK: - Private Methods
 private extension SettingsViewController {
     func getColor() {
-        guard let redComponent = color.cgColor.components?[0] else { return }
-        guard let greenComponent = color.cgColor.components?[1] else { return }
-        guard let blueComponent = color.cgColor.components?[2] else { return }
+        let ciColor = CIColor(color: color)
         
-        redSlider.setValue(Float(redComponent), animated: true)
-        greenSlider.setValue(Float(greenComponent), animated: true)
-        blueSlider.setValue(Float(blueComponent), animated: true)
+        redSlider.value = Float(ciColor.red)
+        greenSlider.value = Float(ciColor.green)
+        blueSlider.value = Float(ciColor.blue)
         
         redValueLabel.text = string(from: redSlider)
         greenValueLabel.text = string(from: greenSlider)
@@ -126,28 +151,7 @@ private extension SettingsViewController {
         String(format: "%.2f", slider.value)
     }
     
-    func addToolBarToKeyboard() {
-        let toolBar = UIToolbar()
-        let doneButton = UIBarButtonItem(
-            title: "Done",
-            style: .done,
-            target: self,
-            action: #selector(donePressed)
-        )
-        
-        toolBar.items = [doneButton]
-        toolBar.sizeToFit()
-        
-        redValueTextField.inputAccessoryView = toolBar
-        greenValueTextField.inputAccessoryView = toolBar
-        blueValueTextField.inputAccessoryView = toolBar
-    }
-    
-    @objc func donePressed() {
-        view.endEditing(true)
-    }
-    
-    func showAlert() {
+    func showAlert(for textField: UITextField) {
         let alert = UIAlertController(
             title: "Too much Value!",
             message: "You should enter a value less than or equal to 1",
@@ -156,7 +160,18 @@ private extension SettingsViewController {
         let okAction = UIAlertAction(
             title: "OK",
             style: .default
-        )
+        ) { _ in
+            let defaultValue: Float = 0.5
+            textField.text = String(format: "%.2f", defaultValue)
+            if textField == self.redValueTextField {
+                self.redSlider.setValue(defaultValue, animated: true)
+            } else if textField == self.greenValueTextField {
+                self.greenSlider.setValue(defaultValue, animated: true)
+            } else {
+                self.blueSlider.setValue(defaultValue, animated: true)
+            }
+            textField.becomeFirstResponder()
+        }
         alert.addAction(okAction)
         present(alert, animated: true)
     }

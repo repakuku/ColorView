@@ -12,21 +12,15 @@ protocol SettingsViewControllerDelegate: AnyObject {
 }
 
 final class MainViewController: UIViewController {
-
-    private var color: UIColor = .systemMint {
-        didSet {
-            view.backgroundColor = color
-        }
-    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = color
+        view.backgroundColor = view.backgroundColor
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         guard let settingsVC = segue.destination as? SettingsViewController else { return }
-        settingsVC.color = color
+        settingsVC.color = view.backgroundColor
         settingsVC.delegate = self
     }
 }
@@ -34,6 +28,6 @@ final class MainViewController: UIViewController {
 // MARK: - SettingsViewControllerDelegate
 extension MainViewController: SettingsViewControllerDelegate {
     func setNew(color: UIColor) {
-        self.color = color
+        view.backgroundColor = color
     }
 }
